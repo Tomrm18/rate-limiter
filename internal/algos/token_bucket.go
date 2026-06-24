@@ -2,6 +2,9 @@ package algos
 
 import (
 	"rate-limiter/internal/clock"
+	"rate-limiter/internal/common"
+	"rate-limiter/internal/util"
+	"sync"
 	"time"
 )
 
@@ -9,21 +12,25 @@ import (
 // if the number of tokens is positive, we allow a request
 // if it is zero, reject the request
 type Bucket struct {
+	mu sync.Mutex
 	// the amount of tokens in the bucket
 	tokens uint
 	// the amount of tokens to add back to the bucket at each refill
 	refillAmount uint
 	// seconds each refill is executed
-	refillSeconds uint
+	refillSeconds time.Duration
 	// time the last refill occured
 	lastRefill time.Time
 	// clock
 	clock clock.Clock
+	// the maximum amount of tokens the bucket can hold
+	capacity uint
 }
 
-func NewBucket(tokens, refillAmount, refillSeconds uint, clock clock.Clock) *Bucket {
+func NewBucket(tokens, refillAmount uint, refillSeconds time.Duration, clock clock.Clock) *Bucket {
 	return &Bucket{
 		tokens:        tokens,
+		capacity:      tokens,
 		refillAmount:  refillAmount,
 		refillSeconds: refillSeconds,
 		clock:         clock,
@@ -31,20 +38,49 @@ func NewBucket(tokens, refillAmount, refillSeconds uint, clock clock.Clock) *Buc
 	}
 }
 
-func (b *Bucket) Allow(key string) (bool, error) {
-	// update the amount of tokens in the bucket based on the amount of time passed
-	// this is known as a 'lazy refill', and allows us to avoid manually running a loop to refill the bucket
+func (b *Bucket) Allow(key string) (*common.Result, error) {
+	return b.AllowN(key, 1)
+}
+
+func (b *Bucket) AllowN(_ string, n uint) (*common.Result, error) {
+	// lock the resources until the function is done, prevents race conditions
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if n == 0 {
+		return nil, ErrInvalidN
+	}
+	if n > b.capacity {
+		return nil, ErrNGreaterThanCapacity
+	}
+
 	elapsed := b.clock.Since(b.lastRefill)
 
-	if elapsed >= (clock.Duration(b.refillSeconds) * clock.Second) {
-		refillMult := uint(elapsed / (time.Duration(b.refillSeconds) * time.Second))
-		b.tokens += b.refillAmount * refillMult
+	if elapsed >= b.refillSeconds {
+		b.refillTokens(elapsed)
 		b.lastRefill = b.clock.Now()
 	}
 
-	if b.tokens == 0 {
-		return false, nil
+	if b.tokens >= n {
+		b.tokens -= n
+		return b.buildResult(true), nil
 	}
-	b.tokens -= 1
-	return true, nil
+
+	return b.buildResult(false), nil
+}
+
+func (b *Bucket) refillTokens(elapsed time.Duration) {
+	refillMult := uint(elapsed / b.refillSeconds)
+	b.tokens += b.refillAmount * refillMult
+	b.tokens = util.Min(b.tokens, b.capacity)
+}
+
+func (b *Bucket) buildResult(res bool) *common.Result {
+	var timeUntilRefill time.Duration
+	if res {
+		timeUntilRefill = 0
+	} else {
+		timeUntilRefill = b.lastRefill.Add(b.refillSeconds).Sub(b.clock.Now())
+	}
+	return common.NewResult(res, b.tokens, timeUntilRefill, b.capacity)
 }
