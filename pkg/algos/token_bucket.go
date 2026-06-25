@@ -1,17 +1,18 @@
 package algos
 
 import (
-	"rate-limiter/internal/clock"
-	"rate-limiter/internal/common"
-	"rate-limiter/internal/util"
 	"sync"
 	"time"
+
+	"github.com/Tomrm18/rate-limiter/internal/clock"
+	"github.com/Tomrm18/rate-limiter/internal/common"
+	"github.com/Tomrm18/rate-limiter/internal/util"
 )
 
 // the Bucket will contain a number of tokens, that will refresh at a fixed rate
 // if the number of tokens is positive, we allow a request
 // if it is zero, reject the request
-type Bucket struct {
+type BucketRateLimiter struct {
 	mu sync.Mutex
 	// the amount of tokens in the bucket
 	tokens uint
@@ -27,8 +28,8 @@ type Bucket struct {
 	capacity uint
 }
 
-func NewBucket(tokens, refillAmount uint, refillSeconds time.Duration, clock clock.Clock) *Bucket {
-	return &Bucket{
+func NewBucketRateLimiter(tokens, refillAmount uint, refillSeconds time.Duration, clock clock.Clock) *BucketRateLimiter {
+	return &BucketRateLimiter{
 		tokens:        tokens,
 		capacity:      tokens,
 		refillAmount:  refillAmount,
@@ -38,11 +39,11 @@ func NewBucket(tokens, refillAmount uint, refillSeconds time.Duration, clock clo
 	}
 }
 
-func (b *Bucket) Allow(key string) (*common.Result, error) {
+func (b *BucketRateLimiter) Allow(key string) (*common.Result, error) {
 	return b.AllowN(key, 1)
 }
 
-func (b *Bucket) AllowN(_ string, n uint) (*common.Result, error) {
+func (b *BucketRateLimiter) AllowN(_ string, n uint) (*common.Result, error) {
 	// lock the resources until the function is done, prevents race conditions
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -69,13 +70,13 @@ func (b *Bucket) AllowN(_ string, n uint) (*common.Result, error) {
 	return b.buildResult(false), nil
 }
 
-func (b *Bucket) refillTokens(elapsed time.Duration) {
+func (b *BucketRateLimiter) refillTokens(elapsed time.Duration) {
 	refillMult := uint(elapsed / b.refillSeconds)
 	b.tokens += b.refillAmount * refillMult
 	b.tokens = util.Min(b.tokens, b.capacity)
 }
 
-func (b *Bucket) buildResult(res bool) *common.Result {
+func (b *BucketRateLimiter) buildResult(res bool) *common.Result {
 	var timeUntilRefill time.Duration
 	if res {
 		timeUntilRefill = 0

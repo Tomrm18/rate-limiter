@@ -1,6 +1,6 @@
 package limiter
 
-import "rate-limiter/internal/common"
+import "github.com/Tomrm18/rate-limiter/internal/common"
 
 type Limiter interface {
 	// Allow checks if a request is permitted for the given key

@@ -2,9 +2,10 @@ package algos
 
 import (
 	"math"
-	"rate-limiter/mocks"
 	"testing"
 	"time"
+
+	"github.com/Tomrm18/rate-limiter/mocks"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -13,7 +14,7 @@ const TEST_KEY = "A"
 
 func TestBucketAllow(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	bucket := NewBucket(10, 1, time.Second, mockClock)
+	bucket := NewBucketRateLimiter(10, 1, time.Second, mockClock)
 
 	// for the purposes of this test, manually reduce tokens to 1
 	bucket.tokens = 1
@@ -65,7 +66,7 @@ func TestBucketAllow(t *testing.T) {
 
 func TestBucketAllowN(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	bucket := NewBucket(10, 2, time.Second, mockClock)
+	bucket := NewBucketRateLimiter(10, 2, time.Second, mockClock)
 
 	// for the purposes of this test, manually reduce tokens to 1
 	bucket.tokens = 1
