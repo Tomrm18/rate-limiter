@@ -30,10 +30,21 @@ func NewSlidingWindowRateLimiter(limit uint, windowSize time.Duration, clock clo
 	}
 }
 
-func (s *SlidingWindowRateLimiter) Allow(_ string) (*common.Result, error) {
+func (s *SlidingWindowRateLimiter) Allow(key string) (*common.Result, error) {
+	return s.AllowN(key, 1)
+}
+
+func (s *SlidingWindowRateLimiter) AllowN(_ string, n int) (*common.Result, error) {
 	// lock the resources until the function is done, prevents race conditions
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if n <= 0 {
+		return nil, ErrInvalidN
+	}
+	if n > int(s.limit) {
+		return nil, ErrNGreaterThanCapacity
+	}
 
 	// check if the current window has expired
 	elapsed := s.clock.Since(s.windowStartTime)
@@ -52,9 +63,9 @@ func (s *SlidingWindowRateLimiter) Allow(_ string) (*common.Result, error) {
 
 	count := s.getCount()
 
-	if count < float64(s.limit) {
-		s.windowRequests += 1
-		return s.buildResult(true, s.limit-uint(math.Floor(count))), nil
+	if math.Floor(count)+float64(n) <= float64(s.limit) {
+		s.windowRequests += n
+		return s.buildResult(true, uint(float64(s.limit)-math.Floor(count)-float64(n))), nil
 	}
 	return s.buildResult(false, 0), nil
 }
@@ -68,5 +79,3 @@ func (s *SlidingWindowRateLimiter) buildResult(res bool, remaining uint) *common
 	timeUntilNextWindow := s.windowStartTime.Add(s.windowSize).Sub(s.clock.Now())
 	return common.NewResult(res, remaining, timeUntilNextWindow, s.limit)
 }
-
-// func (s *SlidingWindowRateLimiter) AllowN(key string, n uint) (*common.Result, error) {}
