@@ -1,4 +1,4 @@
-package algos
+package algos_test
 
 import (
 	"math"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Tomrm18/rate-limiter/mocks"
+	"github.com/Tomrm18/rate-limiter/pkg/algos"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -14,10 +15,7 @@ const TEST_KEY = "A"
 
 func TestBucketAllow(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	bucket := NewBucketRateLimiter(10, 1, time.Second, mockClock)
-
-	// for the purposes of this test, manually reduce tokens to 1
-	bucket.tokens = 1
+	bucket := algos.NewBucketRateLimiter(1, 3, 1, time.Second, mockClock)
 
 	// first request, use 1 token
 	result, err := bucket.Allow(TEST_KEY)
@@ -44,17 +42,14 @@ func TestBucketAllow(t *testing.T) {
 	mockClock.Advance(time.Second * 3)
 
 	result, err = bucket.Allow(TEST_KEY)
-	assert.EqualValues(t, 2, bucket.tokens)
 	assert.True(t, result.Success)
 	assert.Nil(t, err)
 
 	result, err = bucket.Allow(TEST_KEY)
-	assert.EqualValues(t, 1, bucket.tokens)
 	assert.True(t, result.Success)
 	assert.Nil(t, err)
 
 	result, err = bucket.Allow(TEST_KEY)
-	assert.EqualValues(t, 0, bucket.tokens)
 	assert.True(t, result.Success)
 	assert.Nil(t, err)
 
@@ -66,10 +61,7 @@ func TestBucketAllow(t *testing.T) {
 
 func TestBucketAllowN(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	bucket := NewBucketRateLimiter(10, 2, time.Second, mockClock)
-
-	// for the purposes of this test, manually reduce tokens to 1
-	bucket.tokens = 1
+	bucket := algos.NewBucketRateLimiter(1, 10, 2, time.Second, mockClock)
 
 	// first request, use 1 token
 	result, err := bucket.AllowN(TEST_KEY, 1)
@@ -86,13 +78,12 @@ func TestBucketAllowN(t *testing.T) {
 	result, err = bucket.AllowN(TEST_KEY, 10)
 	assert.True(t, result.Success)
 	assert.Nil(t, err)
-	assert.EqualValues(t, 0, bucket.tokens)
 
 	// make a request for 0 requests to be allowed, should receive error
 	_, err = bucket.AllowN(TEST_KEY, 0)
-	assert.Equal(t, ErrInvalidN, err)
+	assert.Equal(t, algos.ErrInvalidN, err)
 
 	// make a request greater than the capacity of the bucket, should receive error
 	_, err = bucket.AllowN(TEST_KEY, math.MaxUint)
-	assert.Equal(t, ErrNGreaterThanCapacity, err)
+	assert.Equal(t, algos.ErrNGreaterThanCapacity, err)
 }

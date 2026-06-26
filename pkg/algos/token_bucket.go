@@ -28,10 +28,10 @@ type BucketRateLimiter struct {
 	capacity uint
 }
 
-func NewBucketRateLimiter(tokens, refillAmount uint, refillSeconds time.Duration, clock clock.Clock) *BucketRateLimiter {
+func NewBucketRateLimiter(tokens, capacity, refillAmount uint, refillSeconds time.Duration, clock clock.Clock) *BucketRateLimiter {
 	return &BucketRateLimiter{
 		tokens:        tokens,
-		capacity:      tokens,
+		capacity:      capacity,
 		refillAmount:  refillAmount,
 		refillSeconds: refillSeconds,
 		clock:         clock,
