@@ -8,5 +8,5 @@ type Limiter interface {
 	Allow(key string) (*common.Result, error)
 	// AllowN checks if n requests is permitted for the given key
 	// a key is usually a IP address, API key or user ID
-	AllowN(key string, n int) (*common.Result, error)
+	AllowN(key string, n uint) (*common.Result, error)
 }
