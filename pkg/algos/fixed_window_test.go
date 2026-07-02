@@ -11,7 +11,8 @@ import (
 
 func TestFixedWindowAllow(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	window := algos.NewFixedWindowRateLimiter(2, time.Second*5, mockClock)
+	mockStore := mocks.NewMockStore()
+	window := algos.NewFixedWindowRateLimiter(2, time.Second*5, mockClock, mockStore)
 
 	// first request
 	result, err := window.Allow(TEST_KEY)
@@ -49,7 +50,8 @@ func TestFixedWindowAllow(t *testing.T) {
 
 func TestFixedWindowAllowN(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	window := algos.NewFixedWindowRateLimiter(2, time.Second*5, mockClock)
+	mockStore := mocks.NewMockStore()
+	window := algos.NewFixedWindowRateLimiter(2, time.Second*5, mockClock, mockStore)
 
 	// first request
 	result, err := window.AllowN(TEST_KEY, 1)

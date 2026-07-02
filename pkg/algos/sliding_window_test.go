@@ -11,7 +11,8 @@ import (
 
 func TestSlidingWindowAllow(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	window := algos.NewSlidingWindowRateLimiter(2, time.Second*5, mockClock)
+	mockStore := mocks.NewMockStore()
+	window := algos.NewSlidingWindowRateLimiter(2, time.Second*5, mockClock, mockStore)
 
 	// first request
 	// 0 / 5 = 0

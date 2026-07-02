@@ -15,10 +15,18 @@ const TEST_KEY = "A"
 
 func TestBucketAllow(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	bucket := algos.NewBucketRateLimiter(1, 3, 1, time.Second, mockClock)
+	store := mocks.NewMockStore()
+	bucket := algos.NewBucketRateLimiter(3, 1, time.Second, mockClock, store)
 
-	// first request, use 1 token
 	result, err := bucket.Allow(TEST_KEY)
+	assert.True(t, result.Success)
+	assert.Nil(t, err)
+
+	result, err = bucket.Allow(TEST_KEY)
+	assert.True(t, result.Success)
+	assert.Nil(t, err)
+
+	result, err = bucket.Allow(TEST_KEY)
 	assert.True(t, result.Success)
 	assert.Nil(t, err)
 
@@ -61,10 +69,11 @@ func TestBucketAllow(t *testing.T) {
 
 func TestBucketAllowN(t *testing.T) {
 	mockClock := mocks.NewMockClock()
-	bucket := algos.NewBucketRateLimiter(1, 10, 2, time.Second, mockClock)
+	store := mocks.NewMockStore()
+	bucket := algos.NewBucketRateLimiter(10, 2, time.Second, mockClock, store)
 
-	// first request, use 1 token
-	result, err := bucket.AllowN(TEST_KEY, 1)
+	// first request, use 10 tokens
+	result, err := bucket.AllowN(TEST_KEY, 10)
 	assert.True(t, result.Success)
 	assert.Nil(t, err)
 

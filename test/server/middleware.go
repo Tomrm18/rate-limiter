@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Tomrm18/rate-limiter/internal/limiter"
+	"github.com/Tomrm18/rate-limiter/pkg/limiter"
 )
 
 func RateLimitMiddleware(bucket limiter.Limiter) func(http.Handler) http.Handler {
